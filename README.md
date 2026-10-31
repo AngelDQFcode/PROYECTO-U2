@@ -11,47 +11,45 @@ Edith Alessandra Gomez Sanchez
 
 Sahory Estrada Trejo
 
-2. Instrucciones de Compilación y Ejecución
+# U2 Proyecto: Ventas e Inventario en Ensamblador
 
-Este proyecto fue desarrollado en ensamblador MASM x86 de 32 bits, haciendo uso de la biblioteca Irvine32. Para ejecutarlo en Visual Studio, sigue estos pasos:
+**Integrantes del Equipo:**
+* Ángel David Quiñónez Figueroa
 
-Abre Visual Studio y crea un nuevo "Proyecto vacío" (C++).
+## 1. Negocio Elegido y Regla Adicional
+* **Negocio:** Tienda de Electrónica.
+* **Regla Adicional:** Descuento por mayoreo. Si el cliente compra 3 o más unidades de un mismo producto, se aplica un 10% de descuento al importe total de esa venta. Esto se resuelve matemáticamente en el código dividiendo el total en centavos entre 10 y restándolo del importe original, descartando fracciones automáticamente.
 
-Haz clic derecho en el proyecto en el Explorador de soluciones -> Dependencias de compilación -> Personalizaciones de compilación y marca la casilla MASM.
+## 2. Organización de Datos en Memoria
+Se utilizó un arreglo contiguo en memoria para almacenar hasta 10 productos (`MAX_PRODUCTOS = 10`). Cada producto está definido por una estructura (`STRUCT`) de 42 bytes en total:
+* **Código:** 8 bytes (7 caracteres + nulo)
+* **Nombre:** 26 bytes (25 caracteres + nulo)
+* **Precio:** 4 bytes (`DWORD` en centavos)
+* **Existencia:** 4 bytes (`DWORD`)
 
-Agrega el archivo fuente codigo.asm a la carpeta de Archivos de origen.
+Para los recorridos, se utiliza el registro `ESI` como apuntador. En cada ciclo de búsqueda o impresión, se le suma el tamaño de la estructura (`TYPE Producto`) a `ESI` para saltar exactamente al inicio del siguiente registro en la memoria RAM.
 
-Haz clic derecho en el proyecto -> Propiedades:
+## 3. Formato del Archivo y Decisiones
+* **Archivo:** `inventario.dat`
+* **Formato:** Volcado binario directo.
+* **Justificación de decisiones:** En lugar de convertir los valores numéricos a cadenas de texto (parseo) para guardarlos, se utiliza la función `WriteToFile` de Irvine32 para transferir el bloque completo de la estructura directamente de la RAM al disco duro. Esto es más eficiente, evita desbordamientos por conversiones y permite que la función `ReadFromFile` recargue el catálogo exacto al iniciar la siguiente sesión sin necesidad de procesar los datos de nuevo.
 
-Ve a Vinculador (Linker) -> General -> Directorios de bibliotecas adicionales: Agrega la ruta de tu carpeta de Irvine (ej. C:\Irvine).
+## 4. Tabla de Pruebas
 
-Ve a Vinculador (Linker) -> Entrada -> Dependencias adicionales: Escribe irvine32.lib;.
+| Prueba / Entrada | Resultado Esperado | Resultado Obtenido |
+| :--- | :--- | :--- |
+| **Alta válida** (USB-001, $250.50, 50 u) | El sistema registra el producto sin errores. | Éxito. Producto registrado en memoria. |
+| **Alta duplicada** (USB-001) | Rechaza el registro por código existente. | Éxito. Muestra `Error: Codigo ya existe`. |
+| **Búsqueda válida** (USB-001) | Muestra los datos correctos ingresados. | Éxito. Muestra precio y existencia exactos. |
+| **Entrada válida** (+30 a USB-001) | Suma unidades (total 80) sin superar 100. | Éxito. Unidades actualizadas a 80. |
+| **Entrada excesiva** (+50 a USB-001) | Rechaza porque 80+50 supera las 100 unidades. | Éxito. Muestra `Error: La existencia superaria las 100 unidades`. |
+| **Venta aceptada** (4 u. de USB-001) | Aplica el descuento del 10% por llevar >= 3 y descuenta existencias. | Éxito. Descuenta 4 unidades y muestra mensaje de regla aplicada. |
+| **Venta rechazada** (90 u. de USB-001) | Rechaza la venta porque el inventario actual es menor a 90. | Éxito. Muestra `Error: Existencias insuficientes`. |
+| **Guardado y Carga** (Opción 6 y reinicio) | Al cerrar y abrir el programa, el catálogo y las modificaciones persisten. | Éxito. El archivo `inventario.dat` recupera los datos íntegros al reiniciar. |
 
-Ve a Microsoft Macro Assembler -> General -> Include Paths: Agrega la ruta de tu carpeta de Irvine.
+## Evidencias de Ejecución
 
-Compila y ejecuta el programa presionando Ctrl + F5.
+Haz clic en el siguiente enlace para visualizar las capturas de pantalla de todas las pruebas realizadas en la consola:
 
-3. Informe Breve
+[📄 PRUEBAS DE LA EJECUCÍON.pdf](PRUEBAS%20DE%20LA%20EJECUC%C3%8DON.pdf)
 
-Negocio elegido: Tienda de electrónica.
-
-Regla adicional del negocio: Descuento por mayoreo. Si el cliente compra 3 o más unidades de un mismo producto en una sola exhibición, el sistema aplica automáticamente un 10% de descuento sobre el importe base.
-
-Organización de datos en memoria: El inventario se estructuró mediante un arreglo contiguo de tamaño fijo (MAX_PRODUCTOS = 10). Cada registro utiliza un STRUCT personalizado de 42 bytes (código, nombre, precio y existencia). Para las búsquedas y validaciones, se navega por este bloque de memoria utilizando el registro apuntador ESI y sumando el tamaño de la estructura para avanzar iterativamente.
-
-Formato del archivo de inventario: Se optó por un archivo binario de volcado directo (inventario.dat). Se utilizaron las funciones de la API de Windows (WriteToFile y ReadFromFile) con su respectivo handle para volcar la memoria RAM directamente al disco. Esta decisión se tomó por su alta eficiencia, ya que evita realizar procesos de "parseo" de texto al cargar los datos.
-
-Decisiones investigadas y Fuentes consultadas:
-Para cumplir la restricción de no usar funciones automáticas (ReadDec/WriteDec) y evitar la imprecisión del coprocesador matemático, se investigó cómo procesar cadenas numéricas manualmente. Los precios capturados se convierten a centavos enteros procesando el código ASCII (restando 30h) y multiplicando por 10 o 100 usando la instrucción MUL. Para imprimirlos en formato moneda, se emplea DIV entre 100 para aislar pesos (cociente) y centavos (residuo).
-
-Fuentes consultadas:
-
-Irvine, K. R. (2014). Assembly Language for x86 Processors (7ma ed.). Pearson. (Consulta sobre manejo de la pila con PUSHAD/POPAD, operaciones de archivos y conversiones ASCII).
-
-Documentación oficial de Intel: Intel 64 and IA-32 Architectures Software Developer's Manual. (Consulta técnica sobre el comportamiento de las banderas y registros en las instrucciones DIV y MUL).
-
-4. Tabla de Pruebas
-
-Las pruebas de ejecución, entradas, resultados esperados y obtenidos se encuentran documentados detalladamente en el archivo adjunto.
-
-📄 Haz clic aquí para abrir y visualizar las pruebas: PRUEBAS DE LA EJECUCÍON.pdf
